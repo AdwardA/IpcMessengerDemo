@@ -2,56 +2,50 @@ package com.jiyu.ipcmessengerdemo;
 
 import android.content.ComponentName;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
+import android.util.Log;
 
 /**
  * create by z on 20/6/10
  */
-public class ServiceConnection implements android.content.ServiceConnection {
-
-    private Handler handler;
+public abstract class ServiceConnection implements android.content.ServiceConnection {
+    String TAG="bugly-ServiceConnection";
     private String tag;
-    private Messenger messenger;
+    private Messenger messengerService;
+    private Messenger messengerClient;
 
-    public ServiceConnection(String tag, Handler handler) {
+    public ServiceConnection(String tag, Messenger messengerClient) {
         this.tag=tag;
-        this.handler=handler;
+        this.messengerClient=messengerClient;
     }
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
         //根据服务端过来的IBinder建立Messenger，用于给服务端发送信息
-        messenger = new Messenger(service);
-        //创建客户端的Messenger，用于服务端回复客户端的消息
-        Messenger messengerReply=new Messenger(handler);
-        //像服务端发送消息
+        messengerService = new Messenger(service);
+        //向服务端发送消息
         Message msg =new Message();
         msg.what= ServerCService.MsgWhatEnum.CONNECT.value();
         Bundle bundle=new Bundle();
         bundle.putString("client",tag);
         msg.setData(bundle);
-        msg.replyTo=messengerReply;
+        msg.replyTo=messengerClient;
         try {
-            messenger.send(msg);
+            messengerService.send(msg);
         } catch (RemoteException e) {
             e.printStackTrace();
         }
+        onServiceConnected(name, messengerService);
     }
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
+        Log.e(TAG, "onServiceDisconnected: "+name );
 
     }
 
-    public Handler getHandler() {
-        return handler;
-    }
-
-    public Messenger getMessenger() {
-        return messenger;
-    }
+    abstract void onServiceConnected(ComponentName name, Messenger messengerService);
 }
